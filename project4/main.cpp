@@ -24,9 +24,10 @@ int main(){
 
     int sweeps = 0;
     for (int i=0; i<50; i++){
-       int num = rand()%4;
-       int num2 = rand()%4;
+       int num = rand()%2;
+       int num2 = rand()%2;
        A[num][num2] = -1.0*A[num][num2];
+       compute_energy(L, A, J);
 
 
 
@@ -43,8 +44,9 @@ double compute_energy(int dim, double ** A, double J){
     double E = 0;
     for (int i = 0; i < dim; i++){
         for (int j = 0; j < dim; j++){
-            E -= J*A[i][j]*A[im][jm];
+            E -= J*A[i][j]*A[i][jm] + J*A[i][j]*A[im][j];
             jm = j;
+            cout << E << endl;
         }
         im = i;
     }
