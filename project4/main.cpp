@@ -1,55 +1,71 @@
 #include <iostream>
 #include <cstdlib>
+#include <cmath>
+#include <fstream>
+#include <iomanip>
+#include <random>
 
-double compute_energy(int dim, double ** A, double J);
 using namespace std;
 
-int main(){
-    int L = 2;       // number of spins
-    double T = 1.0;  // kT/J
-    double J = 1.0;
+// output file
+ofstream ofile;
+
+void initialize(int, int **, double&, double&);
+int periodic(int, int);
+
+int main(int argc, char* argv[]){
+    char *outfilename;
+    int ** spins, n_spins;
+    double E, M;
+    n_spins = atoi(argv[1]);
+    double expectation_values[5];    // array to hold expectation values of E, E^2, M, M^2 and |M|
+
+    random_device rd;     // random device
+    mt19937_64 rng(rd());
+    uniform_real_distribution<double> uniform(0.0, 1.0);  //Uniform distribution of number between 0 and 1
 
 
-    // setting up emtpy spin matrix, to be improved
-    double ** A = new double * [L];
-    for (int i = 0; i < L; i++){
-       A[i] = new double [L];
+    // Allocate memory for 2D spin matrix
+    spins = new int * [n_spins];
+    for (int i = 0; i < n_spins; i++){
+       spins[i] = new int [n_spins];
     }
-    // Initializing spin matrix with all spin up
-    for (int i = 0; i < L; i++){
-        for (int j = 0; j < L; j++){
-            A[i][j] = 1.0;
-        }
-    }
-
-    int sweeps = 0;
-    for (int i=0; i<50; i++){
-       int num = rand()%2;
-       int num2 = rand()%2;
-       A[num][num2] = -1.0*A[num][num2];
-       compute_energy(L, A, J);
-
-
-
-    }
-
-
-
 
 }
 
-double compute_energy(int dim, double ** A, double J){
-    int im = dim-1;
-    int jm = dim-1;
-    double E = 0;
-    for (int i = 0; i < dim; i++){
-        for (int j = 0; j < dim; j++){
-            E -= J*A[i][j]*A[i][jm] + J*A[i][j]*A[im][j];
-            jm = j;
-            cout << E << endl;
+//Function that sets up spin matrix and computes initial energy and magnetization
+void initialize(int n_spins, int ** spins, double& E, double& M){
+
+    // Initializing spin matrix with all spin up and computing magnetization
+    for (int i = 0; i < n_spins; i++){
+        for (int j = 0; j < n_spins; j++){
+            spins[i][j] = 1.0;
+            M += (double) spins[i][j];
+            cout << M << endl;
         }
-        im = i;
     }
-    return E;
+    // compute initial energy
+    for (int i = 0; i < n_spins; i++){
+        for (int j = 0; j < n_spins; j++){
+            E -= (double) (spins[i][j]*(spins[i][periodic(j+1, n_spins)]+spins[i][j]*spins[periodic(i+1,n_spins)][j]));
+        }
+    }
 }
 
+// Function that ensures periodic boundary conditions by moving to the first element of the matrix if the index is out of bounds
+int periodic(int index, int n_spins){
+    if (index >= n_spins){
+        return 0;
+    }
+    else {return index;}
+}
+
+void compute_energy_and_moment(int ** spins, int n_spins, double& E, double& M){
+    for (int i = 0; i < n_spins; i++){
+        for (int j = 0; j < n_spins; j++){
+            M += (double) spins[i][j];
+            E -= (double) (spins[i][j]*(spins[i][periodic(j+1, n_spins)]+spins[i][j]*spins[periodic(i+1,n_spins)][j]));
+        }
+    }
+
+}
