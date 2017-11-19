@@ -20,7 +20,7 @@ void initialize(int, int **, double&, double&);
 // Function that ensures periodic boundary conditions
 int periodic(int, int);
 // Function for the Metropolis algo
-void metropolis(int, int, double, double *);
+void metropolis(int, int, double, double *, string);
 // prints results to file
 void WriteToFile(int, int, double, double *);
 
@@ -33,15 +33,24 @@ int main(int argc, char* argv[]){
     n_spins = atoi(argv[2]);
     MCcycles = atoi(argv[3]);
     double expectation_values[5];    // array to hold expectation values of E, E^2, M, M^2 and |M|
-    double T = 1.0;
+    double T = 2.4;
 
-    metropolis(n_spins, MCcycles, T, expectation_values);
-    WriteToFile(n_spins, MCcycles, T, expectation_values);
+
+
+    metropolis(n_spins, MCcycles, T, expectation_values, filename);
+
+
+
 
 }
 
 //Function that sets up spin matrix and computes initial energy and magnetization
 void initialize(int n_spins, int ** spins, double& E, double& M){
+
+    random_device rd;     // random device
+    mt19937_64 rng(rd());
+    uniform_real_distribution<double> uniform(0.0, 1.0);  //Uniform distribution of number between 0 and 1
+
 
     // Initializing spin matrix with all spin up and computing magnetization
     for (int i = 0; i < n_spins; i++){
@@ -50,6 +59,20 @@ void initialize(int n_spins, int ** spins, double& E, double& M){
             M += (double) spins[i][j];
         }
     }
+    /*
+    // Initialize spin matrix with random spin orientation and compute energy
+    for (int i = 0; i < n_spins; i++){
+        for (int j = 0; j < n_spins; j++){
+            double r = (double)(uniform(rng));
+            if (r < 0.5){
+               spins[i][j] = -1.0;
+            }
+            else {
+                spins[i][j] = 1.0;
+            }
+            M += (double) spins[i][j];
+        }
+    }*/
     // compute initial energy
     for (int i = 0; i < n_spins; i++){
         for (int j = 0; j < n_spins; j++){
@@ -58,11 +81,14 @@ void initialize(int n_spins, int ** spins, double& E, double& M){
     }
 }
 
-void metropolis(int n_spins, int MCcycles, double temp, double *expectation_values){
+void metropolis(int n_spins, int MCcycles, double temp, double *expectation_values, string filename){
     int ** spins;                    // spin matrix
     int deltaE[5];                   // array to store possible energy differences
     double exp_deltaE[5];            // array to store precalculated w = exp(-dE/T)
     double T = temp;                 // temperature, kT/J
+
+    string fileout = filename;
+    ofile.open(fileout);
 
     random_device rd;     // random device
     mt19937_64 rng(rd());
@@ -99,7 +125,8 @@ void metropolis(int n_spins, int MCcycles, double temp, double *expectation_valu
                 int j_index = (int) (uniform(rng)*(double)n_spins);
                 // Compute difference in energy after flipping spin at (i_index,j_index)
                 int dE = 2*spins[i_index][j_index]*(spins[i_index][periodic(j_index+1, n_spins)]+spins[periodic(i_index+1, n_spins)][j_index]
-                        +spins[i_index][periodic(i_index-1, n_spins)]+spins[periodic(i_index-1, n_spins)][j_index]);
+                        +spins[i_index][periodic(j_index-1, n_spins)]+spins[periodic(i_index-1, n_spins)][j_index]);
+
 
 
                 if (dE <= 0){
@@ -130,6 +157,10 @@ void metropolis(int n_spins, int MCcycles, double temp, double *expectation_valu
         expectation_values[3] += M*M;
         expectation_values[4] += fabs(M);
 
+        WriteToFile(n_spins, cycles, T, expectation_values);
+
+
+
 
     }
 }
@@ -153,6 +184,13 @@ void WriteToFile(int n_spins, int MCcycles, double temp, double * expectation_va
     double M_expected = expectation_values[2]*norm;
     double M2_expected = expectation_values[3]*norm;
     double Mabs_expected = expectation_values[4]*norm;
+    double Cv =E2_expected - E_expected*E_expected;
+    double chi =  M2_expected - M_expected*M_expected;
+    ofile << setiosflags(ios::showpoint | ios::uppercase);
+    ofile << setw(15) << setprecision(8) << MCcycles;
+    ofile << setw(15) << setprecision(8) << E_expected;
+    ofile << setw(15) << setprecision(8) << Mabs_expected << endl;
+
 
 }
 
